@@ -1,84 +1,137 @@
-"""
-For your homework this week, you'll be creating a wsgi application of
-your own.
+#Tim Pauley
+#Python 230, Assignment 04
+#Date: April 29, 2019
 
-You'll create an online calculator that can perform several operations.
-
-You'll need to support:
-
-  * Addition
-  * Subtractions
-  * Multiplication
-  * Division
-
-Your users should be able to send appropriate requests and get back
-proper responses. For example, if I open a browser to your wsgi
-application at `http://localhost:8080/multiple/3/5' then the response
-body in my browser should be `15`.
-
-Consider the following URL/Response body pairs as tests:
-
-```
-  http://localhost:8080/multiply/3/5   => 15
-  http://localhost:8080/add/23/42      => 65
-  http://localhost:8080/subtract/23/42 => -19
-  http://localhost:8080/divide/22/11   => 2
-  http://localhost:8080/               => <html>Here's how to use this page...</html>
-```
-
-To submit your homework:
-
-  * Fork this repository (Session03).
-  * Edit this file to meet the homework requirements.
-  * Your script should be runnable using `$ python calculator.py`
-  * When the script is running, I should be able to view your
-    application in my browser.
-  * I should also be able to see a home page (http://localhost:8080/)
-    that explains how to perform calculations.
-  * Commit and push your changes to your fork.
-  * Submit a link to your Session03 fork repository!
+#Wsgi Calculator
 
 
-"""
+import unittest
+import subprocess
+import http.client
+import random
 
 
-def add(*args):
-    """ Returns a STRING with the sum of the arguments """
+class WebTestCase(unittest.TestCase):
+    """tests for the WSGI Calculator"""
 
-    # TODO: Fill sum with the correct value, based on the
-    # args provided.
-    sum = "0"
+    def setUp(self):
+        self.server_process = subprocess.Popen(
+            [
+                "python",
+                "calculator.py"
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
-    return sum
+    def tearDown(self):
+        self.server_process.kill()
+        self.server_process.communicate()
 
-# TODO: Add functions for handling more arithmetic operations.
+    def get_response(self, url):
+        """
+        Helper function to get a response from a given url, using http.client
+        """
 
-def resolve_path(path):
-    """
-    Should return two values: a callable and an iterable of
-    arguments.
-    """
+        conn = http.client.HTTPConnection('localhost:8080')
+        conn.request('GET', url)
 
-    # TODO: Provide correct values for func and args. The
-    # examples provide the correct *syntax*, but you should
-    # determine the actual values of func and args using the
-    # path.
-    func = add
-    args = ['25', '32']
+        response = conn.getresponse()
+        self.assertEqual(200, response.getcode())
 
-    return func, args
+        conn.close()
 
-def application(environ, start_response):
-    # TODO: Your application code from the book database
-    # work here as well! Remember that your application must
-    # invoke start_response(status, headers) and also return
-    # the body of the response in BYTE encoding.
-    #
-    # TODO (bonus): Add error handling for a user attempting
-    # to divide by zero.
-    pass
+        return response
+
+    def test_add(self):
+        """
+        A call to /add/a/b yields a + b
+        """
+
+        a = random.randint(100, 10000)
+        b = random.randint(100, 10000)
+
+        path = "/add/{}/{}".format(a, b)
+
+        response = self.get_response(path)
+        self.assertEqual(200, response.getcode())
+
+        self.assertIn(str(a + b).encode(), response.read())
+
+    def test_multiply(self):
+        """
+        A call to /multiply/a/b yields a*b
+        """
+
+        a = random.randint(100, 10000)
+        b = random.randint(100, 10000)
+
+        path = "/multiply/{}/{}".format(a, b)
+
+        response = self.get_response(path)
+        self.assertEqual(200, response.getcode())
+
+        self.assertIn(str(a*b).encode(), response.read())
+
+    def test_subtract_positive_result(self):
+        """
+        A call to /subtract/a/b yields a - b, for a > b
+        """
+
+        a = random.randint(10000, 100000)
+        b = random.randint(100, 1000)
+
+        path = "/subtract/{}/{}".format(a, b)
+
+        response = self.get_response(path)
+        self.assertEqual(200, response.getcode())
+
+        self.assertIn(str(a - b).encode(), response.read())
+
+    def test_subtract_negative_result(self):
+        """
+        A call to /subtract/a/b yields a - b, for a < b
+        """
+
+        a = random.randint(100, 1000)
+        b = random.randint(10000, 100000)
+
+        path = "/subtract/{}/{}".format(a, b)
+
+        response = self.get_response(path)
+        self.assertEqual(200, response.getcode())
+
+        self.assertIn(str(a - b).encode(), response.read())
+
+    def test_divide(self):
+        """
+        A call to /divide/a/b yields a/b, for a % b = 0
+        """
+
+        result = random.randint(2, 10)
+
+        b = random.randint(100, 1000)
+        a = result * b
+
+        path = "/divide/{}/{}".format(a, b)
+
+        response = self.get_response(path)
+        self.assertEqual(200, response.getcode())
+
+        self.assertIn(str(result).encode(), response.read())
+
+    def test_index_instructions(self):
+        """
+        The index page at the root of the server shall include instructions
+        on how to use the page.
+        """
+
+        response = self.get_response('/')
+        self.assertEqual(200, response.getcode())
+
+        # We're just testing if the word "add" is present in the index
+        self.assertIn("add".encode(), response.read())
+
 
 if __name__ == '__main__':
-    # TODO: Insert the same boilerplate wsgiref simple
-    # server creation that you used in the book database.
-    pass
+    unittest.main()
