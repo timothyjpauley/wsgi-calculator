@@ -5,133 +5,153 @@
 #Wsgi Calculator
 
 
-import unittest
-import subprocess
-import http.client
-import random
+""" 
+For your homework this week, you'll be creating a wsgi application of
+your own.
+
+You'll create an online calculator that can perform several operations.
+
+You'll need to support:
+
+  * Addition
+  * Subtractions
+  * Multiplication
+  * Division
+
+Your users should be able to send appropriate requests and get back
+proper responses. For example, if I open a browser to your wsgi
+application at `http://localhost:8080/multiple/3/5' then the response
+body in my browser should be `15`.
+
+Consider the following URL/Response body pairs as tests:
+
+```
+  http://localhost:8080/multiply/3/5   => 15
+  http://localhost:8080/add/23/42      => 65
+  http://localhost:8080/subtract/23/42 => -19
+  http://localhost:8080/divide/22/11   => 2
+  http://localhost:8080/               => <html>Here's how to use this page...</html>
+```
+
+To submit your homework:
+
+  * Fork this repository (Session03).
+  * Edit this file to meet the homework requirements.
+  * Your script should be runnable using `$ python calculator.py`
+  * When the script is running, I should be able to view your
+    application in my browser.
+  * I should also be able to see a home page (http://localhost:8080/)
+    that explains how to perform calculations.
+  * Commit and push your changes to your fork.
+  * Submit a link to your Session03 fork repository!
 
 
-class WebTestCase(unittest.TestCase):
-    """tests for the WSGI Calculator"""
+"""
 
-    def setUp(self):
-        self.server_process = subprocess.Popen(
-            [
-                "python",
-                "calculator.py"
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+def add(*args):
+    args = [int(num) for num in args]
+    return str(reduce(operator.add, args))
 
-    def tearDown(self):
-        self.server_process.kill()
-        self.server_process.communicate()
 
-    def get_response(self, url):
-        """
-        Helper function to get a response from a given url, using http.client
-        """
+def multiply(*args):
+    args = [int(num) for num in args]
+    return str(reduce(operator.mul, args))
 
-        conn = http.client.HTTPConnection('localhost:8080')
-        conn.request('GET', url)
 
-        response = conn.getresponse()
-        self.assertEqual(200, response.getcode())
+def subtract(*args):
+    args = [int(num) for num in args]
+    return str(reduce(operator.sub, args))
 
-        conn.close()
 
-        return response
+def divide(*args):
+    args = [int(num) for num in args]
+    return str(reduce(operator.truediv, args))
 
-    def test_add(self):
-        """
-        A call to /add/a/b yields a + b
-        """
+# TODO: Add functions for handling more arithmetic operations.
 
-        a = random.randint(100, 10000)
-        b = random.randint(100, 10000)
+def index():
+    """
+    Landing page instructions for how to use the calculator site
+    """
+    body="""
+    <html>
+        <div class="container"> 
+            <body>
+                <h1>Tim Pauley's Calculator Website</h1>           
+                <h5>On this site: you can add, multiply, subtract, and divide numbers 
+                based on what you type in the URL path.<br>
+                </h5>
+                <a href=http://localhost:8080/multiply/3/9>This is an example of the program http://localhost:8080/multiply/3/9</a>
+            </body>
+        </div>
+    </html>"""
 
-        path = "/add/{}/{}".format(a, b)
+    return body
 
-        response = self.get_response(path)
-        self.assertEqual(200, response.getcode())
+def resolve_path(path):
+    """
+    Should return two values: a callable and an iterable of
+    arguments.
+    """
 
-        self.assertIn(str(a + b).encode(), response.read())
+    # TODO: Provide correct values for func and args. The
+    # examples provide the correct *syntax*, but you should
+    # determine the actual values of func and args using the
+    # path.
+    operations = {
+        "" : index,
+        "add": add,
+        "subtract": subtract,
+        "multiply": multiply,
+        "divide": divide
+    }
 
-    def test_multiply(self):
-        """
-        A call to /multiply/a/b yields a*b
-        """
+    path = path.strip("/").split("/")
 
-        a = random.randint(100, 10000)
-        b = random.randint(100, 10000)
+    func_name = path[0]
+    args = path[1:]
 
-        path = "/multiply/{}/{}".format(a, b)
+    try:
+        func = operations[func_name]
+    except KeyError:
+        raise NameError
 
-        response = self.get_response(path)
-        self.assertEqual(200, response.getcode())
+    return func, args
 
-        self.assertIn(str(a*b).encode(), response.read())
 
-    def test_subtract_positive_result(self):
-        """
-        A call to /subtract/a/b yields a - b, for a > b
-        """
-
-        a = random.randint(10000, 100000)
-        b = random.randint(100, 1000)
-
-        path = "/subtract/{}/{}".format(a, b)
-
-        response = self.get_response(path)
-        self.assertEqual(200, response.getcode())
-
-        self.assertIn(str(a - b).encode(), response.read())
-
-    def test_subtract_negative_result(self):
-        """
-        A call to /subtract/a/b yields a - b, for a < b
-        """
-
-        a = random.randint(100, 1000)
-        b = random.randint(10000, 100000)
-
-        path = "/subtract/{}/{}".format(a, b)
-
-        response = self.get_response(path)
-        self.assertEqual(200, response.getcode())
-
-        self.assertIn(str(a - b).encode(), response.read())
-
-    def test_divide(self):
-        """
-        A call to /divide/a/b yields a/b, for a % b = 0
-        """
-
-        result = random.randint(2, 10)
-
-        b = random.randint(100, 1000)
-        a = result * b
-
-        path = "/divide/{}/{}".format(a, b)
-
-        response = self.get_response(path)
-        self.assertEqual(200, response.getcode())
-
-        self.assertIn(str(result).encode(), response.read())
-
-    def test_index_instructions(self):
-        """
-        The index page at the root of the server shall include instructions
-        on how to use the page.
-        """
-
-        response = self.get_response('/')
-        self.assertEqual(200, response.getcode())
-
-        # We're just testing if the word "add" is present in the index
-        self.assertIn("add".encode(), response.read())
+def application(environ, start_response):
+    headers = [('Content-type', 'text/html')]
+    try:
+        path = environ.get('PATH_INFO', None)
+        if path is None:
+            raise NameError
+        func, args = resolve_path(path)
+        body = func(*args)
+        status = "200 OK"
+    except NameError:
+        status = "404 Not Found"
+        body = "<h1> Not Found</h>"
+    except Exception:
+        status = "500 Internal Server Error"
+        body = "<h1>Internal Server Error</h>"
+        print(traceback.format_exc())
+    # except ZeroDivisionError:
+    #     status = "406 Not Acceptable"
+    #     body = "<h1> Cannot divide by zero.</h1>"
+    finally:
+        headers.append(('Content-length', str(len(body))))
+        start_response(status, headers)
+        return [body.encode('utf8')]
+    # TODO: Your application code from the book database
+    # work here as well! Remember that your application must
+    # invoke start_response(status, headers) and also return
+    # the body of the response in BYTE encoding.
+    #
+    # TODO (bonus): Add error handling for a user attempting
+    # to divide by zero.
 
 
 if __name__ == '__main__':
-    unittest.main()
+    from wsgiref.simple_server import make_server
+    srv = make_server('localhost', 8080, application)
+    srv.serve_forever()
