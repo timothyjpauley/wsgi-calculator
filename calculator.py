@@ -47,6 +47,9 @@ To submit your homework:
 
 
 """
+import traceback
+import operator
+from functools import reduce
 
 def add(*args):
     args = [int(num) for num in args]
@@ -77,13 +80,20 @@ def index():
     <html>
         <div class="container"> 
             <body>
-                <h1>Tim Pauley's Calculator Website</h1>           
+                <h1 id="Foo">Tim Pauley's Calculator Website</h1>           
                 <h5>On this site: you can add, multiply, subtract, and divide numbers 
                 based on what you type in the URL path.<br>
                 </h5>
-                <a href=http://localhost:8080/multiply/3/9>This is an example of the program http://localhost:8080/multiply/3/9</a>
+                <a href=http://localhost:8080/add/3/9>http://localhost:8080/add/3/9</a>
             </body>
         </div>
+                <script>
+    $(document).ready(function() {
+    var f = document.getElementById('Foo');
+    setInterval(function() {
+        f.style.display = (f.style.display == 'none' ? '' : 'none');
+    }, 1000); 
+}); </script>
     </html>"""
 
     return body
