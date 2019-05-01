@@ -163,5 +163,9 @@ def application(environ, start_response):
 
 if __name__ == '__main__':
     from wsgiref.simple_server import make_server
-    srv = make_server('localhost', 8080, application)
+
+    port = int(os.environ.get("PORT", 8080))
+
+    srv = make_server('0.0.0.0', port, application)
+    #srv = make_server('localhost', 8080, application)
     srv.serve_forever()
