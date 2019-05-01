@@ -47,6 +47,7 @@ To submit your homework:
 
 
 """
+import os
 import traceback
 import operator
 from functools import reduce
@@ -152,6 +153,7 @@ def application(environ, start_response):
         headers.append(('Content-length', str(len(body))))
         start_response(status, headers)
         return [body.encode('utf8')]
+
     # TODO: Your application code from the book database
     # work here as well! Remember that your application must
     # invoke start_response(status, headers) and also return
@@ -159,7 +161,6 @@ def application(environ, start_response):
     #
     # TODO (bonus): Add error handling for a user attempting
     # to divide by zero.
-
 
 if __name__ == '__main__':
     from wsgiref.simple_server import make_server
